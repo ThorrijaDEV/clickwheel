@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console — reproductor local</title>
+<meta name="description" content="Reproductor de música local con estética de equipo hi-fi vintage. Todo en tu navegador, sin subir nada.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="console">
+
+  <header class="brand">
+    <div class="brand-mark">◉</div>
+    <div>
+      <h1>Console</h1>
+      <p class="tagline">tu música, en tu navegador · nada sale de tu equipo</p>
+    </div>
+  </header>
+
+  <section class="deck">
+    <div class="deck-left">
+      <div class="display">
+        <div class="display-glass">
+          <p class="np-label">Sonando</p>
+          <h2 id="np-title">—</h2>
+          <p id="np-artist" class="np-artist">Carga una carpeta para empezar</p>
+          <div class="vu" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button id="btn-shuffle" class="knob-btn" title="Aleatorio (S)">⤨</button>
+        <button id="btn-prev" class="knob-btn" title="Anterior (←)">⏮</button>
+        <button id="btn-play" class="knob-btn big" title="Play/Pausa (Espacio)">▶</button>
+        <button id="btn-next" class="knob-btn" title="Siguiente (→)">⏭</button>
+        <button id="btn-repeat" class="knob-btn" title="Repetir (R)">⟳</button>
+      </div>
+
+      <div class="timeline-row">
+        <span id="t-cur" class="time">0:00</span>
+        <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posición">
+        <span id="t-end" class="time">0:00</span>
+      </div>
+
+      <div class="volume-row">
+        <span class="vol-label">VOL</span>
+        <input id="volume" type="range" min="0" max="100" value="80" aria-label="Volumen">
+      </div>
+    </div>
+
+    <aside class="library">
+      <div class="lib-head">
+        <h3>Biblioteca</h3>
+        <label class="load-btn">
+          Cargar carpeta
+          <input id="folder" type="file" webkitdirectory multiple accept="audio/*" hidden>
+        </label>
+      </div>
+      <ol id="track-list" class="track-list"></ol>
+      <p id="lib-empty" class="lib-empty">Sin pistas todavía.</p>
+    </aside>
+  </section>
+
+  <footer class="foot">
+    <p>Atajos: <kbd>Espacio</kbd> play · <kbd>←</kbd>/<kbd>→</kbd> pista · <kbd>S</kbd> aleatorio · <kbd>R</kbd> repetir</p>
+  </footer>
+
+  <audio id="audio" preload="metadata"></audio>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
