@@ -84,85 +84,108 @@ object Ytm {
     }
 
     /**
-     * Resolve a direct audio URL for a YTM track via the innertube player API
-     * using the ANDROID_VR client (still returns unencrypted adaptive URLs).
+     * Resolve a direct audio URL for a YTM track via the innertube player API.
+     *
+     * YouTube rotates anti-bot flags across internal clients ("Sign in to
+     * confirm you're not a bot"), so we try a fallback chain: ANDROID_VR
+     * first, then IOS. Each is verified live before shipping; the chain keeps
+     * working while at least one client passes.
      */
     suspend fun resolveAudio(song: Song): Pair<String, Map<String, String>> =
         withContext(Dispatchers.IO) {
             val videoId = VIDEO_ID_RE.find(song.uri ?: "")?.groupValues?.get(1)
                 ?: throw IllegalArgumentException("pista sin identificador de vídeo")
 
-            val payload = JSONObject().apply {
-                put("videoId", videoId)
-                put("contentCheckOk", true)
-                put("racyCheckOk", true)
-                put(
-                    "context",
-                    JSONObject().put(
-                        "client",
-                        JSONObject()
-                            .put("clientName", "ANDROID_VR")
-                            .put("clientVersion", "1.61.48")
-                            .put("deviceMake", "Oculus")
-                            .put("deviceModel", "Quest 3")
-                            .put("osName", "Android")
-                            .put("osVersion", "12")
-                            .put("androidSdkVersion", 32),
-                    ),
-                )
-            }.toString()
-
-            val request = okhttp3.Request.Builder()
-                .url(INNERTUBE_PLAYER_URL)
-                .header("User-Agent", VR_USER_AGENT)
-                .post(
-                    okhttp3.RequestBody.create(
-                        "application/json; charset=utf-8".toMediaTypeOrNull(),
-                        payload.toByteArray(),
-                    ),
-                )
-                .build()
-
-            http.newCall(request).execute().use { resp ->
-                val rawBody = resp.body?.string() ?: "{}"
-                if (!resp.isSuccessful) {
-                    throw IllegalStateException("YouTube respondió ${resp.code}: ${rawBody.take(160)}")
+            var lastError: Exception? = null
+            for (client in CLIENT_CHAIN) {
+                try {
+                    val url = innertubeAudioUrl(videoId, client)
+                    return@withContext Pair(url, emptyMap())
+                } catch (e: Exception) {
+                    Log.w(TAG, "cliente ${client.name} falló: ${e.message}")
+                    lastError = e
                 }
-                val json = JSONObject(rawBody)
-                val playStatus = json.optJSONObject("playabilityStatus")
-                val status = playStatus?.optString("status") ?: "UNKNOWN"
-                if (status != "OK") {
-                    val reason = playStatus?.optString("reason") ?: ""
-                    throw IllegalStateException(if (reason.isBlank()) status else reason)
-                }
-
-                val formats = json.optJSONObject("streamingData")
-                    ?.optJSONArray("adaptiveFormats")
-                    ?: throw IllegalStateException("respuesta sin formatos")
-
-                var bestUrl: String? = null
-                var bestBitrate = -1
-                for (i in 0 until formats.length()) {
-                    val f = formats.getJSONObject(i)
-                    if (!f.optString("mimeType").startsWith("audio")) continue
-                    val url = f.optString("url")
-                    if (url.isEmpty()) continue
-                    val bitrate = f.optInt("bitrate", 0)
-                    if (bitrate > bestBitrate) {
-                        bestBitrate = bitrate
-                        bestUrl = url
-                    }
-                }
-                Pair(
-                    bestUrl ?: throw IllegalStateException("sin audio reproducible"),
-                    emptyMap(),
-                )
             }
+            throw lastError ?: IllegalStateException("sin clientes disponibles")
         }
 
+    /** Single innertube /player call; returns the best direct audio URL. */
+    private fun innertubeAudioUrl(videoId: String, client: InnertubeClient): String {
+        val payload = JSONObject().apply {
+            put("videoId", videoId)
+            put("contentCheckOk", true)
+            put("racyCheckOk", true)
+            put(
+                "context",
+                JSONObject().put(
+                    "client",
+                    JSONObject()
+                        .put("clientName", client.name)
+                        .put("clientVersion", client.version),
+                ),
+            )
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url(INNERTUBE_PLAYER_URL)
+            .header("User-Agent", client.userAgent)
+            .post(
+                okhttp3.RequestBody.create(
+                    "application/json; charset=utf-8".toMediaTypeOrNull(),
+                    payload.toByteArray(),
+                ),
+            )
+            .build()
+
+        http.newCall(request).execute().use { resp ->
+            val rawBody = resp.body?.string() ?: "{}"
+            if (!resp.isSuccessful) {
+                throw IllegalStateException("YouTube respondió ${resp.code}: ${rawBody.take(160)}")
+            }
+            val json = JSONObject(rawBody)
+            val playStatus = json.optJSONObject("playabilityStatus")
+            val status = playStatus?.optString("status") ?: "UNKNOWN"
+            if (status != "OK") {
+                val reason = playStatus?.optString("reason") ?: ""
+                throw IllegalStateException(if (reason.isBlank()) status else reason)
+            }
+
+            val formats = json.optJSONObject("streamingData")
+                ?.optJSONArray("adaptiveFormats")
+                ?: throw IllegalStateException("respuesta sin formatos")
+
+            var bestUrl: String? = null
+            var bestBitrate = -1
+            for (i in 0 until formats.length()) {
+                val f = formats.getJSONObject(i)
+                if (!f.optString("mimeType").startsWith("audio")) continue
+                val url = f.optString("url")
+                if (url.isEmpty()) continue
+                val bitrate = f.optInt("bitrate", 0)
+                if (bitrate > bestBitrate) {
+                    bestBitrate = bitrate
+                    bestUrl = url
+                }
+            }
+            return bestUrl ?: throw IllegalStateException("sin audio reproducible")
+        }
+    }
+
+    private class InnertubeClient(val name: String, val version: String, val userAgent: String)
+
+    private val CLIENT_CHAIN = listOf(
+        InnertubeClient(
+            "ANDROID_VR", "1.61.48",
+            "com.google.android.apps.youtube.vr.oculus/1.61.48 " +
+                "(Linux; U; Android 12; eureka-user Build/SQ3A.220605.009.A1) gzip",
+        ),
+        InnertubeClient(
+            "IOS", "20.10.4",
+            "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)",
+        ),
+    )
+
+    private const val TAG = "Clickwheel"
     private const val INNERTUBE_PLAYER_URL = "https://www.youtube.com/youtubei/v1/player"
-    private const val VR_USER_AGENT =
-        "com.google.android.apps.youtube.vr.oculus/1.61.48 " +
-            "(Linux; U; Android 12; eureka-user Build/SQ3A.220605.009.A1) gzip"
     private val VIDEO_ID_RE = Regex("[?&]v=([A-Za-z0-9_-]{6,})")
 }
