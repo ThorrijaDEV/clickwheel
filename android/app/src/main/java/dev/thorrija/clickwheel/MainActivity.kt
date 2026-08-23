@@ -28,7 +28,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -128,7 +132,7 @@ fun ClickwheelApp(viewModel: PlayerViewModel = viewModel()) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFF101014))
+            .background(Brush.verticalGradient(listOf(Color(0xFF0B0514), Color(0xFF1D1038))))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
@@ -172,7 +176,7 @@ fun ClickwheelApp(viewModel: PlayerViewModel = viewModel()) {
                                 viewModel.startResolved(song, url, headers)
                                 screen = Screen.NOW_PLAYING
                             } catch (e: Exception) {
-                                searchError = e.message ?: "error resolviendo el stream"
+                                searchError = "😵 no pude sacar el audio de esa pista — prueba otra"
                             } finally {
                                 searching = false
                             }
@@ -200,8 +204,12 @@ fun ClickwheelApp(viewModel: PlayerViewModel = viewModel()) {
         }
 
         Text(
-            "Clickwheel",
-            color = Color(0xFF6E6E78),
+            "✧ clickwheel ✧",
+            color = HotPink,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 4.sp,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 12.dp),
         )
 

@@ -1,6 +1,7 @@
 package dev.thorrija.clickwheel
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.atan2
 
 /**
@@ -51,11 +54,19 @@ fun ClickWheel(
         Box(
             modifier = Modifier
                 .size(wheelSize)
-                .shadow(10.dp, CircleShape)
+                // iridescent Y2K halo around the wheel
+                .border(
+                    4.dp,
+                    Brush.sweepGradient(
+                        listOf(HotPink, UltraViolet, CyberCyan, AcidLime, HotPink),
+                    ),
+                    CircleShape,
+                )
+                .shadow(12.dp, CircleShape)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(Color(0xFFF6F6F7), Color(0xFFD8D9DC)),
+                        colors = listOf(Color(0xFFFDFDFF), Color(0xFFC9CFE6)),
                     ),
                 )
                 .pointerInput(Unit) {
@@ -83,16 +94,16 @@ fun ClickWheel(
         )
 
         // Ring buttons (cardinal zones of the classic wheel)
-        WheelButton(Modifier.align(Alignment.TopCenter), "MENU") {
+        WheelButton(Modifier.align(Alignment.TopCenter), "MENU", InkText, FontWeight.Black) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress); onMenu()
         }
-        WheelButton(Modifier.align(Alignment.CenterStart), "⏮") {
+        WheelButton(Modifier.align(Alignment.CenterStart), "⏮", CyberCyan, FontWeight.Bold) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPrevious()
         }
-        WheelButton(Modifier.align(Alignment.CenterEnd), "⏭") {
+        WheelButton(Modifier.align(Alignment.CenterEnd), "⏭", CyberCyan, FontWeight.Bold) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress); onNext()
         }
-        WheelButton(Modifier.align(Alignment.BottomCenter), "▶/❙❙") {
+        WheelButton(Modifier.align(Alignment.BottomCenter), "▶/❙❙", UltraViolet, FontWeight.Bold) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPlayPause()
         }
 
@@ -100,8 +111,9 @@ fun ClickWheel(
             modifier = Modifier
                 .size(96.dp)
                 .shadow(4.dp, CircleShape)
+                .border(3.dp, Brush.linearGradient(listOf(HotPink, CyberCyan)), CircleShape)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(Color(0xFFEDEEF0), Color(0xFFCFD1D5))))
+                .background(Brush.linearGradient(listOf(Color.White, Color(0xFFE4E9FF))))
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { onSelect() })
                 },
@@ -115,6 +127,8 @@ fun ClickWheel(
 private fun WheelButton(
     modifier: Modifier,
     label: String,
+    tint: Color,
+    weight: FontWeight,
     onClick: () -> Unit,
 ) {
     Box(
@@ -124,7 +138,7 @@ private fun WheelButton(
             .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label)
+        Text(label, color = tint, fontWeight = weight, fontSize = 15.sp)
     }
 }
 
