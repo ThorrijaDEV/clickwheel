@@ -3,6 +3,8 @@ package dev.thorrija.clickwheel
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.util.Log
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
@@ -113,12 +115,20 @@ object Ytm {
             val request = okhttp3.Request.Builder()
                 .url(INNERTUBE_PLAYER_URL)
                 .header("User-Agent", VR_USER_AGENT)
-                .post(okhttp3.RequestBody.create(null, payload.toByteArray()))
+                .post(
+                    okhttp3.RequestBody.create(
+                        "application/json; charset=utf-8".toMediaTypeOrNull(),
+                        payload.toByteArray(),
+                    ),
+                )
                 .build()
 
             http.newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) throw IllegalStateException("YouTube respondió ${resp.code}")
-                val json = JSONObject(resp.body?.string() ?: "{}")
+                val rawBody = resp.body?.string() ?: "{}"
+                if (!resp.isSuccessful) {
+                    throw IllegalStateException("YouTube respondió ${resp.code}: ${rawBody.take(160)}")
+                }
+                val json = JSONObject(rawBody)
                 val playStatus = json.optJSONObject("playabilityStatus")
                 val status = playStatus?.optString("status") ?: "UNKNOWN"
                 if (status != "OK") {

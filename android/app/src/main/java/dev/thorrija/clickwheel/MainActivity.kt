@@ -176,6 +176,7 @@ fun ClickwheelApp(viewModel: PlayerViewModel = viewModel()) {
                                 viewModel.startResolved(song, url, headers)
                                 screen = Screen.NOW_PLAYING
                             } catch (e: Exception) {
+                                android.util.Log.e("Clickwheel", "resolveAudio falló", e)
                                 searchError = "😵 no pude sacar el audio de esa pista — prueba otra"
                             } finally {
                                 searching = false
