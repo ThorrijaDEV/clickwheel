@@ -1,6 +1,7 @@
 package dev.thorrija.clickwheel
 
-import android.content.Context
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -30,9 +31,9 @@ data class PlayerState(
     val error: String? = null,
 )
 
-class PlayerViewModel(private val appContext: Context) : ViewModel() {
+class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val player: ExoPlayer = ExoPlayer.Builder(appContext).build()
+    private val player: ExoPlayer = ExoPlayer.Builder(app).build()
 
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state
